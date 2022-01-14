@@ -1,0 +1,4 @@
+[submodule "COMOKIT-Model"]
+	path = COMOKIT-Model
+	url = https://github.com/COMOKIT/COMOKIT-Model
+	branch = comokit-building
