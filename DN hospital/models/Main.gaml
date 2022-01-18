@@ -6,7 +6,7 @@ import "Boundary.gaml"
 import "People.gaml"
 //import "Detected.gaml"
 global {
-
+	int nb_infected <- 0;
 	reflex start_game when: cycle = 0{
 		create doctor number: nb_doc {
 			cur_room <- any(room where (each.type ='doctor'));
@@ -39,6 +39,7 @@ global {
 		ask any(family){
 			infected <- true;
 			current_status <- 2;
+			nb_infected <- nb_infected + 1;
 		}
 //		ask any(inpatient){
 //			infected <- true;
@@ -64,7 +65,7 @@ global {
 experiment main type: gui {
 	float minimum_cycle_duration <- 0.01;
 	output {
-	//		layout #split toolbars: true tray: false navigator: false consoles: false tabs: false editors: false;
+		layout #split toolbars: true tray: false navigator: false consoles: false tabs: false editors: false;
 		display map type: opengl background: #black {
 			image file: "../images/department.png" refresh: false;
 //			image file: "../images/ee.jpg" refresh: false;
@@ -79,6 +80,11 @@ experiment main type: gui {
 			species beds;
 			species room transparency: 0.7;
 			//species benches;
+		}
+		display "cumulative_incidence" refresh: every(30#mn) {
+			chart "total infected" background: #white axes: #black {
+				data "total infected" value: nb_infected color: #red marker: false style: line;
+			}
 		}
 
 	}
