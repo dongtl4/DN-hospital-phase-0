@@ -37,9 +37,13 @@ global {
 		}
 		
 		create BuildingWorking;
-		create BuildingGoingHome with:[activity_places:: BuildingEntrance as list];
-		create BuildingEatingOutside with:[activity_places:: BuildingEntrance as list];
+		create ActivityGoHome with:[activity_places:: BuildingEntrance as list];
+		create ActivityEatOutside with:[activity_places:: BuildingEntrance as list];
 		create BuildingMultiActivity with:[activity_places::CommonArea where (each.type = multi_act)];
+		create ActivityGoToOffice;
+		create ActivityVisitInpatient;
+		create ActivityGoToMeeting;
+		create ActivityGoToAdmissionRoom;
 	}
 }
 
@@ -57,27 +61,52 @@ species BuildingActivity {
 			return rs closest_to p;
 		}
 	}
-	
 }
+
+species ActivityGoToOffice parent: BuildingActivity {
+	Room get_place(BuildingIndividual p) {
+		return p.working_place;
+	}
+}
+
+species ActivityVisitInpatient parent: BuildingActivity {
+	Room get_place(BuildingIndividual p) {
+		return one_of((Room where (each.type = WARD)) - p.current_room); 
+	}
+}
+
+species ActivityGoToAdmissionRoom parent: BuildingActivity {
+	Room get_place(BuildingIndividual p) {
+		return one_of(Room where (each.type = ADMISSION_ROOM)); 
+	}
+}
+
+species ActivityGoToMeeting parent: BuildingActivity {
+	Room get_place(BuildingIndividual p) {
+		return one_of(Room where (each.type = MEETING_ROOM)); 
+	}
+}
+
 species BuildingMultiActivity parent: BuildingActivity {
 	Room get_place(BuildingIndividual p) {
 		return first(activity_places);
 	}
 }
+
 species BuildingWorking parent: BuildingActivity {
 	Room get_place(BuildingIndividual p) {
 		return p.working_place;
 	}
 }
 
-species BuildingGoingHome parent: BuildingActivity  {
+species ActivityGoHome parent: BuildingActivity  {
 	string name <- going_home;
 	Room get_place(BuildingIndividual p) {
 		return BuildingEntrance closest_to p;
 	}
 }
 
-species BuildingEatingOutside parent: BuildingActivity  {
+species ActivityEatOutside parent: BuildingActivity  {
 	string name <- eating_outside;
 	Room get_place(BuildingIndividual p) {
 		return BuildingEntrance closest_to p;
@@ -92,5 +121,4 @@ species BuildingSanitation parent: BuildingActivity{
 			return activity_places closest_to p;
 		}
 	}
-	
 }

@@ -11,8 +11,7 @@ model CoVid19
 
 import "BuildingExperiment.gaml"
 
-
-experiment NoIntervention type: gui parent: AbstractExperiment{
+experiment main type: gui parent: AbstractExperiment{
 	string scenario<-"school day";
 	
 	action _init_
@@ -23,6 +22,18 @@ experiment NoIntervention type: gui parent: AbstractExperiment{
 		];
 	}
 }
+
+//experiment NoIntervention type: gui parent: AbstractExperiment{
+//	string scenario<-"school day";
+//	
+//	action _init_
+//	{   
+//		create simulation with: [num_people_per_room:: 20, density_scenario::"num_people_room",distance_people::2.0#m, 
+//		agenda_scenario::scenario, separator_proba::0.0,
+//		init_all_ages_proportion_wearing_mask::0.0,init_all_ages_factor_contact_rate_wearing_mask:: 0.0, ventilation_proba::0.0
+//		];
+//	}
+//}
 
 //experiment UsingMask type: gui parent: AbstractExperiment{
 //	string scenario<-"school day";

@@ -407,5 +407,4 @@ grid unit_cell parent: AbstractPlace cell_width: unit_cell_size cell_height: uni
 			 draw shape color:blend(#green, #red, 1 - (coeff_visu_virus_load_cell * viral_load))  ;	
 		}
 	}
-	
 }

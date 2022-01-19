@@ -50,12 +50,30 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 	float wandering_time_ag;
 	bool finished_goto <- false;
 	
-	aspect default {
-		if not is_outside  {
-			draw circle(P_shoulder_length) color: state = latent ? #pink : ((state = symptomatic)or(state=asymptomatic)or(state=presymptomatic)? #red : #green) border: #black;
-		}
-	}
+	init {
+		is_outside <- true;
+		do initialise_epidemio;
 	
+		pedestrian_species <- [BuildingIndividual];
+		obstacle_species <- [BuildingIndividual, Wall];		
+		// Params for pedestrian skill 		
+		obstacle_consideration_distance <-P_obstacle_consideration_distance;
+		pedestrian_consideration_distance <-P_pedestrian_consideration_distance;
+		shoulder_length <- P_shoulder_length;
+		avoid_other <- P_avoid_other;
+		proba_detour <- P_proba_detour;
+		minimal_distance <- P_minimal_distance;
+		A_pedestrians_SFM <- P_A_pedestrian_SFM;
+		A_obstacles_SFM <- P_A_obstacles_SFM;
+		B_pedestrians_SFM <- P_B_pedestrian_SFM;
+		B_obstacles_SFM <- P_B_obstacles_SFM;
+		relaxion_SFM <- P_relaxion_SFM;
+		gama_SFM <- P_gama_SFM;
+		lambda_SFM <- P_lambda_SFM;
+		use_geometry_waypoint <- P_use_geometry_target;
+		tolerance_waypoint <- P_tolerance_target;
+	}
+
 	//#############################################################
 	//Reflexes
 	//#############################################################
@@ -223,8 +241,9 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 		}
 	}
 	
-	reflex define_activity when: not waiting_sanitation and not empty(current_agenda_week) and 
-		(after(current_agenda_week.keys[0])){
+	reflex define_activity when: not waiting_sanitation and 
+								not empty(current_agenda_week) and 
+								(after(current_agenda_week.keys[0])) {
 		if(target_place != nil and (has_place) ) {target_room.available_places << target_place;}
 		string n <- current_activity = nil ? "" : copy(current_activity.name);
 		Room prev_tr <- copy(target_room);
@@ -232,9 +251,11 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 		current_activity <- current_agenda_week.values[0];
 		current_agenda_week >> first(current_agenda_week);
 		target_room <- current_activity.get_place(self);
+		
+		// NOTE: remember to create the Activity* species
 		list<RoomEntrance> possible_entrances <- target_room.entrances where (not((each path_to target_room).shape overlaps prev_tr));
 		if (empty (possible_entrances)) {
-			possible_entrances <-  target_room.entrances;
+			possible_entrances <- target_room.entrances;
 		}
 		target <- (target_room.entrances closest_to self).location;
 		go_oustide_room <- true;
@@ -247,7 +268,7 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 		}
 	}
 	
-	reflex goto_activity when: target != nil and not in_line{
+	reflex goto_activity when: target != nil and not in_line {
 		bool arrived <- false;
 		point prev_loc <- copy(location);
 		if goto_entrance {
@@ -356,4 +377,14 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 			}	
 		}
  	}
+ 	
+ 	rgb get_color {
+		return (state = latent) ? #pink : ((state = symptomatic)or(state=asymptomatic)or(state=presymptomatic)? #red : #green);
+ 	}
+ 	
+ 	aspect default {
+		if not is_outside  {
+			draw circle(P_shoulder_length) color: get_color() border: #black;
+		}
+	}
 }

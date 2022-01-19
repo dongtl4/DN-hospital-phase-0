@@ -14,17 +14,14 @@
 model CoVid19
  
 import "Building Synthetic Population.gaml"
-
-import "Parameters.gaml"
- 
 import "Entities/Building Spatial Entities.gaml"
-
+import "Parameters.gaml"
  
 global {
 	species<BuildingIndividual> building_individual_species <- BuildingIndividual; // by default
 	container<BuildingIndividual> all_building_individuals -> {container<BuildingIndividual>(building_individual_species.population+(building_individual_species.subspecies accumulate each.population))};
 	
-	shape_file rooms_shape_file <- shape_file("../generated/unlabeled_rooms.shp");
+	shape_file rooms_shape_file <- shape_file("../includes/rooms.shp");
 	shape_file entrances_shape_file <- shape_file("../includes/entrances.shp");
 	shape_file walls_shape_file <- shape_file("../includes/walls.shp");
 	shape_file pedestrian_path_shape_file <- shape_file("../generated/pedestrian_paths.shp");
@@ -45,11 +42,15 @@ global {
 	
 	container<Room> rooms_list -> {container<Room>(Room.population+(Room.subspecies accumulate each.population))};
 			
-			
-	geometry open_area ;
-	
+	geometry open_area;
 	
 	init {
+		// These will be overridden if they are put in ./Parameters.gaml
+		starting_date <- date([2020,4,6,5,30]);
+		final_date <- date([2020,4,20,18,0]);
+		step <- 1#s;
+		nb_step_for_one_day <- #day / step;
+		
 		create outside;
 		the_outside <- first(outside);
 		do init_epidemiological_parameters;
@@ -59,6 +60,7 @@ global {
 			list<geometry> fs <- free_spaces_shape_file overlapping self;
 			fs <- fs where (each covers shape); 
 			free_space <- fs with_min_of (each.location distance_to location);
+			// Workaround for a NPE in build_intersection_areas
 			if free_space = nil {
 				free_space <- shape + P_shoulder_length;
 			}
@@ -169,8 +171,7 @@ global {
 		do create_activities;
 		
 		map<string, list<Room>> rooms_type <- Room group_by each.type;
-		available_offices <- (workplace_layer accumulate rooms_type[each]) where (each != nil and each.is_available());	
-		
+		available_offices <- (workplace_layer accumulate rooms_type[each]) where (each != nil and each.is_available());
 		
 		ask BuildingEntrance {
 			if (not empty(PedestrianPath)) {
@@ -203,14 +204,10 @@ global {
 	action create_elements_from_shapefile {
 		create Wall from: walls_shape_file;
 		int i <- 0;
-		create Room from: rooms_shape_file {
-			list<string> types <- ["classe", "bureau", "multi-act", "Sanitation"];
-			type <- types[i mod length(types)];
-			i <- i+ 1;
-		}
+		create Room from: rooms_shape_file;
 		ask Room {
 			if type = multi_act {
-				create CommonArea  with: [shape::shape, type::type];
+				create CommonArea with: [shape::shape, type::type];
 				do die;
 			}
 		}
@@ -237,8 +234,8 @@ global {
 			starting_date <- next_date;
 		}
 	}
+
 	reflex end_simulation when: current_date >= final_date {
 		do pause;	
 	}
-				
 }

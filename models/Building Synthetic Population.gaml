@@ -11,12 +11,10 @@
 model BuildingSyntheticPopulation
 
 import "Entities/BuildingActivity.gaml"
-
 import "Entities/Building Spatial Entities.gaml" 
-
 import "Constants.gaml"
-
 import "Entities/BuildingIndividual.gaml"
+import "Entities/Hospital Individuals.gaml"
 
 global {
 		
@@ -50,24 +48,10 @@ global {
 				}
 			} 
 		}
-		create BuildingIndividual number: nb {
-			age <- rnd(3, 6); 
-			obstacle_species <- [BuildingIndividual, Wall];
-			obstacle_consideration_distance <-P_obstacle_consideration_distance;
-			pedestrian_consideration_distance <-P_pedestrian_consideration_distance;
-			shoulder_length <- P_shoulder_length;
-			avoid_other <- P_avoid_other;
-			proba_detour <- P_proba_detour;
-			minimal_distance <- P_minimal_distance;
-			A_pedestrians_SFM <- P_A_pedestrian_SFM;
-			A_obstacles_SFM <- P_A_obstacles_SFM;
-			B_pedestrians_SFM <- P_B_pedestrian_SFM;
-			B_obstacles_SFM <- P_B_obstacles_SFM;
-			relaxion_SFM <- P_relaxion_SFM;
-			gama_SFM <- P_gama_SFM;
-			lambda_SFM <- P_lambda_SFM;
-			use_geometry_waypoint <- P_use_geometry_target;
-			tolerance_waypoint <- P_tolerance_target;
+
+		
+		create BuildingIndividual number: 0 {
+			age <- rnd(3, 6);
 			is_outside <- true;
 			
 			pedestrian_species <- [BuildingIndividual];
@@ -79,16 +63,14 @@ global {
 			
 			location <- any_location_in (one_of(BuildingEntrance).init_place);
 			working_place <- one_of (available_offices);
-			if (working_place = nil) {do die;}
-			working_place.nb_affected <- working_place.nb_affected + 1;
-			if not(working_place.is_available()) {
-				available_offices >> working_place;
-			}
 			
+//			if (working_place = nil) {do die;}
+//			working_place.nb_affected <- working_place.nb_affected + 1;
+//			if not(working_place.is_available()) {
+//				available_offices >> working_place;
+//			}
 			working_desk <- working_place.get_target(self,false);
-			if (working_place = nil) {
-				do die;
-			}
+		
 			date cd <- current_date + rnd(arrival_time_interval);
 			if (use_sanitation and not empty(sanitation_rooms) and flip(proba_using_before_work)) {
 				agenda_day[cd] <- first(BuildingSanitation);
@@ -107,14 +89,14 @@ global {
 						agenda_day[act_time[1]] <-first(BuildingWorking); 
 					}
 				
-					agenda_day[lunch_time[0]] <-first(BuildingEatingOutside) ;
+					agenda_day[lunch_time[0]] <-first(ActivityEatOutside) ;
 					agenda_day[lunch_time[1]] <- first(BuildingWorking);
 					
 					if (act_time[0] > lunch_time[0]) {
 						agenda_day[act_time[0]] <-first(BuildingMultiActivity); 
 						agenda_day[act_time[1]] <-first(BuildingWorking); 
 					}
-					agenda_day[end_day] <- first(BuildingGoingHome);
+					agenda_day[end_day] <- first(ActivityGoHome);
 	
 				} 
 			}
@@ -125,5 +107,14 @@ global {
 			}
 			current_agenda_week <- copy(agenda_week);
 		}	
+		
+				
+		create Doctor number: 5;
+		create Nurse number: 20;
+		create Inpatient number: 40;
+	}
+	
+	reflex create_outpatient when: every(10#mn) and current_date.hour > 7 {
+		create Outpatient {}
 	}
 }
