@@ -92,10 +92,10 @@ species Nurse parent: BuildingIndividual {
 		loop while: work_time.hour < 12 {
 			if flip(0.7) {
 				agenda_day[work_time] <- first(ActivityVisitInpatient);
-				work_time <- work_time add_minutes rnd(5#mn); 
+				work_time <- work_time + rnd(5#mn); 
 			} else {
 				agenda_day[work_time] <- first(ActivityGoToAdmissionRoom);
-				work_time <- work_time add_minutes rnd(30#mn); 
+				work_time <- work_time + rnd(30#mn); 
 			}
 		}
 
@@ -121,14 +121,45 @@ species Inpatient parent: BuildingIndividual {
 		is_outside <- false;
 		Room assigned_ward <- one_of(Room where (each.type = WARD and each.nb_affected < 5));
 		assigned_ward.nb_affected <- assigned_ward.nb_affected + 1;
+		assigned_ward.people_inside << self;
 		location <- any_location_in(one_of(assigned_ward.available_places));
-		
 		map<date,BuildingActivity> agenda_day;
+	}
+
+	aspect default {
+		if !is_outside {
+			draw circle(0.5) color: get_color();
+		}
+	}
+}
+
+species Visitor parent: BuildingIndividual {
+	init {
+		location <- any_location_in(one_of(BuildingEntrance).init_place);
+		
+		if (flip(1.0)) {
+			do define_new_case;
+			latent_period <- 0.0;
+		}
+
+		map<date, BuildingActivity> agenda_day;
+		
+		date work_time <- current_date + 10;
+		loop while: work_time.hour < 12 {
+			agenda_day[work_time] <- first(ActivityVisitInpatient);
+			work_time <- work_time + 10#mn; 
+		}
+		loop i from: 0 to: 5 {
+			loop d over: agenda_day.keys {
+				agenda_week[d add_days i] <- agenda_day[d];
+			}
+		}
+		current_agenda_week <- copy(agenda_week);
 	}
 	
 	aspect default {
 		if !is_outside {
-			draw circle(0.5) color: get_color();
+			draw triangle(2) color: get_color() border: #black;
 		}
 	}
 }
@@ -138,15 +169,15 @@ species Outpatient parent: BuildingIndividual {
 		map<date,BuildingActivity> agenda_day;
 		location <- any_location_in(one_of(BuildingEntrance).init_place);
 
-		if (flip(0.2)) {
-			latent_period <- 0.0;
+		if (flip(1.0)) {
 			do define_new_case;
+			latent_period <- 0.0;
 		}
 
 		date visit_time <- current_date + 10#s;
 		date leave_time <- visit_time + rnd(15#mn);
 		agenda_day[visit_time] <- first(ActivityGoToAdmissionRoom);
-		agenda_day[leave_time] <- first(ActivityGoHome);
+		agenda_day[leave_time] <- first(ActivityLeaveBuilding);
 		
 		loop i from: 0 to: 5 {
 			loop d over: agenda_day.keys {

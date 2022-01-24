@@ -50,7 +50,8 @@ global {
 		final_date <- date([2020,4,20,18,0]);
 		step <- 1#s;
 		nb_step_for_one_day <- #day / step;
-		
+		seed <- 25.0;
+
 		create outside;
 		the_outside <- first(outside);
 		do init_epidemiological_parameters;
@@ -134,27 +135,26 @@ global {
 		}
 		ask rooms_list{
 			geometry contour <- nil;
-			float dist <-0.5;
+			float dist <- 10.0;
 			int cpt <- 0;
 			loop while: contour = nil {
 				cpt <- cpt + 1;
 				contour <- copy(shape.contour);
 				ask Wall at_distance 2.0 {
 					contour <- contour - (shape +dist);
-			
 				}
 				if cpt < limit_cpt_for_entrance_room_creation {
-					ask (Room  + CommonArea) at_distance 1.0 {
+					ask (Room + CommonArea) at_distance 1.0 {
 						contour <- contour - (shape + dist);
 					}
 				}
 				if cpt = 20 {
 					break;
 				}
-				dist <- dist * 0.5;	
+				dist <- dist * 0.5;
 			} 
 			if contour != nil {
-				list<point> ents <- points_on (contour, 2.0);
+				list<point> ents <- points_on (contour, 1.7);
 				loop pt over:ents {
 					create RoomEntrance with: [location::pt,my_room::self] {
 						myself.entrances << self;
@@ -166,7 +166,6 @@ global {
 				point pte <- (myself.entrances closest_to self).location;
 				dists <- self distance_to pte;
 			}
-					
 		}
 		do create_activities;
 		
@@ -199,8 +198,7 @@ global {
 			state <- init_state;
 		}
 	}
-	
-	
+
 	action create_elements_from_shapefile {
 		create Wall from: walls_shape_file;
 		int i <- 0;
@@ -216,9 +214,8 @@ global {
 				shape <- shape + P_shoulder_length;
 			}
 		}
-	}	
-	
-	
+	}
+
 	reflex fast_forward when: (BuildingIndividual first_with !(each.is_outside)) = nil {
 		date next_date <- BuildingIndividual min_of (first(each.current_agenda_week.keys));
 		if (next_date != nil) and (next_date >  current_date){

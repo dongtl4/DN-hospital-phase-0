@@ -49,72 +49,12 @@ global {
 			} 
 		}
 
-		
-		create BuildingIndividual number: 0 {
-			age <- rnd(3, 6);
-			is_outside <- true;
-			
-			pedestrian_species <- [BuildingIndividual];
-			//obstacle_species<-[Wall];
-			
-			do initialise_epidemio;
-			
-			map<date,BuildingActivity> agenda_day;
-			
-			location <- any_location_in (one_of(BuildingEntrance).init_place);
-			working_place <- one_of (available_offices);
-			
-//			if (working_place = nil) {do die;}
-//			working_place.nb_affected <- working_place.nb_affected + 1;
-//			if not(working_place.is_available()) {
-//				available_offices >> working_place;
-//			}
-			working_desk <- working_place.get_target(self,false);
-		
-			date cd <- current_date + rnd(arrival_time_interval);
-			if (use_sanitation and not empty(sanitation_rooms) and flip(proba_using_before_work)) {
-				agenda_day[cd] <- first(BuildingSanitation);
-				agenda_day[cd + 10] <- first(BuildingWorking);
-			} else {
-				agenda_day[cd] <- first(BuildingWorking);
-			}
-			
-			switch agenda_scenario {
-				match "school day" {
-					list<date> lunch_time <- to_restaurant[working_place];
-					list<date> act_time <- to_multi_act[working_place];
-					date end_day <- end_school[working_place];
-					if (act_time[0] < lunch_time[0]) {
-						agenda_day[act_time[0]] <-first(BuildingMultiActivity); 
-						agenda_day[act_time[1]] <-first(BuildingWorking); 
-					}
-				
-					agenda_day[lunch_time[0]] <-first(ActivityEatOutside) ;
-					agenda_day[lunch_time[1]] <- first(BuildingWorking);
-					
-					if (act_time[0] > lunch_time[0]) {
-						agenda_day[act_time[0]] <-first(BuildingMultiActivity); 
-						agenda_day[act_time[1]] <-first(BuildingWorking); 
-					}
-					agenda_day[end_day] <- first(ActivityGoHome);
-	
-				} 
-			}
-			loop i from: 0 to: 5 {
-				loop d over: agenda_day.keys {
-					agenda_week[d add_days i] <- agenda_day[d];
-				}
-			}
-			current_agenda_week <- copy(agenda_week);
-		}	
-		
-				
 		create Doctor number: 5;
 		create Nurse number: 20;
 		create Inpatient number: 40;
 	}
 	
-	reflex create_outpatient when: every(10#mn) and current_date.hour > 7 {
-		create Outpatient {}
+	reflex create_visitor when: every(1#mn) and current_date.hour > 7 {
+//		create Visitor {}
 	}
 }

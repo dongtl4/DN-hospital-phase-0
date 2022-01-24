@@ -74,7 +74,7 @@ global {
 	//DISPLAY PARAMETERS
 	bool display_pedestrian_path <- false parameter: "Display pedestrian path" category: "Visualization";
 	bool display_free_space <- false parameter: "Display free space" category: "Visualization";
-	bool display_desk <- true parameter: "Display desks" category: "Visualization";
+	bool display_desk <- false parameter: "Display desks" category: "Visualization";
 	bool display_room_entrance <- true parameter: "Display room entrance" category: "Visualization";
 	bool display_room_status <- false parameter: "Display room status" category: "Visualization";
 	bool display_infection_grid <- false parameter: "Display infection grid" category: "Visualization";

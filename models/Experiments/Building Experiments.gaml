@@ -9,7 +9,7 @@
 ******************************************************************/
 model CoVid19
 
-import "BuildingExperiment.gaml"
+import "Base Experiment.gaml"
 
 experiment main type: gui parent: AbstractExperiment{
 	string scenario<-"school day";

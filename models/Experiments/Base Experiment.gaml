@@ -43,6 +43,7 @@ experiment AbstractExperiment type:gui autorun:false virtual: true{
 			species Nurse;
 			species Inpatient;
 			species Outpatient;
+			species Visitor;
 
 		 	graphics "date" {
 				draw string(current_date, "dd-MM-yyyy HH:mm:ss") at: {0, 0} size: 20;

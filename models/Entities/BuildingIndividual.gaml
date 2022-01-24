@@ -29,7 +29,8 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 	map<date, BuildingActivity> current_agenda_week;
 	BuildingActivity current_activity; 
 	point target;
-	Room target_room;
+	point dst_point;
+	Room dst_room;
 	Room current_room;
 	bool has_place <- false;
 	PlaceInRoom target_place;
@@ -55,8 +56,8 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 		do initialise_epidemio;
 	
 		pedestrian_species <- [BuildingIndividual];
-		obstacle_species <- [BuildingIndividual, Wall];		
-		// Params for pedestrian skill 		
+		obstacle_species <- [BuildingIndividual, Wall];
+		// Params for pedestrian skill
 		obstacle_consideration_distance <-P_obstacle_consideration_distance;
 		pedestrian_consideration_distance <-P_pedestrian_consideration_distance;
 		shoulder_length <- P_shoulder_length;
@@ -127,7 +128,6 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 		}
 		if BENCHMARK {bench["Individual.infect_others"] <- bench["Individual.infect_others"] + machine_time - start;}
 	}
-	
 
 	//Reflex to trigger infection when outside of the commune
 	reflex become_infected_outside when: is_outside and (state = susceptible){
@@ -135,8 +135,7 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 		ask outside {do outside_epidemiological_dynamic(myself, step);}
 		if BENCHMARK {bench["Individual.become_infected_outside"] <- bench["Individual.become_infected_outside"] + machine_time - start;}
 	}
-	
-	
+
 	//Reflex to update disease cycle
 	reflex update_epidemiology when:(state!=removed) {
 		float start <- BENCHMARK ? machine_time : 0.0;
@@ -166,10 +165,8 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 			current_agenda_week[d add_days 7] <- agenda_week[d];
 		}
 	}
-	
-	
-	
-	reflex common_area_behavior when: not is_outside and species(target_room) = CommonArea and (location overlaps target_room) {
+
+	reflex common_area_behavior when: not is_outside and species(dst_room) = CommonArea and (location overlaps dst_room) {
 		if wandering {
 			if (wandering_time_ag > wandering_time) {
 				if (target_place != nil) {
@@ -182,8 +179,8 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 						do walk;
 					}
 					
-					if not(location overlaps target_room.inside_geom) {
-						location <- (target_room.inside_geom closest_points_with location) [0];
+					if not(location overlaps dst_room.inside_geom) {
+						location <- (dst_room.inside_geom closest_points_with location) [0];
 					}
 					if final_waypoint =nil {
 						wandering <- false;
@@ -191,11 +188,11 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 				} else {
 					wandering <- false;
 				}
-				if not(location overlaps target_room.inside_geom) {
-					location <- (target_room.inside_geom closest_points_with location) [0];
+				if not(location overlaps dst_room.inside_geom) {
+					location <- (dst_room.inside_geom closest_points_with location) [0];
 				}
 			} else {
-				do wander amplitude: 140.0 bounds: target_room.inside_geom speed: speed / 5.0;
+				do wander amplitude: 140.0 bounds: dst_room.inside_geom speed: speed / 5.0;
 				wandering_time_ag <- wandering_time_ag + step;	
 			}
 		} else if goto_a_desk {
@@ -205,8 +202,8 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 				do walk;
 			
 			}
-			if not(location overlaps target_room.inside_geom) {
-				location <- (target_room.inside_geom closest_points_with location) [0];
+			if not(location overlaps dst_room.inside_geom) {
+				location <- (dst_room.inside_geom closest_points_with location) [0];
 			}
 			if final_waypoint =nil {
 				goto_a_desk <- false;
@@ -219,10 +216,10 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 			} else if flip(proba_change_desk) { 
 				
 				goto_a_desk <- true;
-				PlaceInRoom pir <- one_of (target_room.places);
+				PlaceInRoom pir <- one_of (dst_room.places);
 				target_desk <- {pir.location.x + rnd(-0.5,0.5),pir.location.y + rnd(-0.5,0.5)};
-				if not(target_desk overlaps target_room.inside_geom) {
-					target_desk <- (target_room.inside_geom closest_points_with target_desk) [0];
+				if not(target_desk overlaps dst_room.inside_geom) {
+					target_desk <- (dst_room.inside_geom closest_points_with target_desk) [0];
 				}
 				if ((location distance_to target_desk) > 2.0) {
 					do compute_virtual_path pedestrian_graph:pedestrian_network target: target_desk ;
@@ -230,34 +227,38 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 			}
 		}
 	}
-	
+
 	reflex sanitation_behavior when: using_sanitation {
 		sanitation_time <- sanitation_time + step;
 		if (sanitation_time > sanitation_usage_duration) {
 			sanitation_time <- 0.0;
 			using_sanitation <- false;
 			waiting_sanitation <- false;
-			target_room.people_inside >> self;
+			dst_room.people_inside >> self;
 		}
 	}
-	
+
 	reflex define_activity when: not waiting_sanitation and 
 								not empty(current_agenda_week) and 
 								(after(current_agenda_week.keys[0])) {
-		if(target_place != nil and (has_place) ) {target_room.available_places << target_place;}
+		if(target_place != nil and (has_place) ) {dst_room.available_places << target_place;}
 		string n <- current_activity = nil ? "" : copy(current_activity.name);
-		Room prev_tr <- copy(target_room);
+		Room prev_tr <- copy(dst_room);
 		do release_path;
+
+		// Pop the next activity out of the agenda and get the new destination
 		current_activity <- current_agenda_week.values[0];
 		current_agenda_week >> first(current_agenda_week);
-		target_room <- current_activity.get_place(self);
-		
-		// NOTE: remember to create the Activity* species
-		list<RoomEntrance> possible_entrances <- target_room.entrances where (not((each path_to target_room).shape overlaps prev_tr));
+		pair dst_pair <- current_activity.get_destination(self);
+		dst_room <- dst_pair.key;
+		dst_point <- dst_pair.value;
+
+		// NOTE: remember to create one agent for each of the Activity* species to avoid an error here
+		list<RoomEntrance> possible_entrances <- dst_room.entrances where (not((each path_to dst_room).shape overlaps prev_tr));
 		if (empty (possible_entrances)) {
-			possible_entrances <- target_room.entrances;
+			possible_entrances <- dst_room.entrances;
 		}
-		target <- (target_room.entrances closest_to self).location;
+		target <- (possible_entrances closest_to self).location;
 		go_oustide_room <- true;
 		is_outside <- false;
 		goto_entrance <- false;
@@ -267,12 +268,12 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 			waiting_sanitation <- true;
 		}
 	}
-	
+
 	reflex goto_activity when: target != nil and not in_line {
 		bool arrived <- false;
 		point prev_loc <- copy(location);
 		if goto_entrance {
-			if (queueing) and (species(target_room) != BuildingEntrance) and ((self distance_to target) < (2 * distance_queue))  and ((self distance_to target) > (1 * distance_queue))  {
+			if (queueing) and (species(dst_room) != BuildingEntrance) and ((self distance_to target) < (2 * distance_queue))  and ((self distance_to target) > (1 * distance_queue))  {
 				point pt <- the_entrance.get_position();
 				if (pt != target) {
 					final_waypoint <- nil;
@@ -280,26 +281,23 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 				}
 			}
 			if (final_waypoint = nil) and ((location distance_to target) > 2.0)  {
-					do compute_virtual_path pedestrian_graph:pedestrian_network target: target ;
-				}
-				if (final_waypoint != nil) {
-					do walk;
-				}
-				
-				arrived <- final_waypoint = nil;
-				if (arrived) {
-					is_slow_real <- false;
-					counter <- 0;
-				}
-			
+				do compute_virtual_path pedestrian_graph:pedestrian_network target: target;
+			}
+			if (final_waypoint != nil) {
+				do walk;
+			}
+			arrived <- final_waypoint = nil;
+			if (arrived) {
+				is_slow_real <- false;
+				counter <- 0;
+			}
 		} else {
 			if (finished_goto) {
 				do goto target: target;
 			} else {
 				if (final_waypoint = nil) {
-					do compute_virtual_path pedestrian_graph:pedestrian_network target: target ;
+					do compute_virtual_path pedestrian_graph:pedestrian_network target: target;
 				}
-				
 				do walk;
 				finished_goto <- (final_waypoint = nil) and (location != target);
 			}
@@ -309,15 +307,14 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 			}
 		}
 		if(arrived) {
-			
 			if (go_oustide_room) {
 				current_room <- nil;
-				the_entrance <- (target_room.entrances closest_to self);
+				the_entrance <- (dst_room.entrances closest_to self);
 					
 				if (!queueing) {
 					target <- the_entrance.location;
 				} else {
-					if (species(target_room) = BuildingEntrance) {
+					if (species(dst_room) = BuildingEntrance) {
 						target <- the_entrance.location;
 					} else {
 						target <- the_entrance.get_position();
@@ -328,11 +325,11 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 				goto_entrance <- true;
 			}
 			else if (goto_entrance) {
-				current_room <- target_room;
+				current_room <- dst_room;
 				if (species(current_activity) = BuildingSanitation) {
-					target <- target_room.location;
+					target <- dst_room.location;
 					goto_entrance <- false;
-					if (queueing) or (target_room.type = sanitation) {
+					if (queueing) or (dst_room.type = sanitation) {
 						ask RoomEntrance closest_to self {
 							do add_people(myself);
 						}
@@ -341,23 +338,21 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 							
 					}
 				} else {
-					target_place <- (target_room = working_place) ? working_desk : target_room.get_target(self, species(target_room) = CommonArea);
-					if target_place != nil {
-						target <- target_place.location;
-						
-						if (queueing and (species(target_room) != BuildingEntrance)) {
+					if dst_point != nil {
+						target <- dst_point.location;
+						if (queueing and (species(dst_room) != BuildingEntrance)) {
 							ask RoomEntrance closest_to self {
 								do add_people(myself);
 							}
 							in_line <- true;
 						}
 					} else {
-						Room tr <- current_activity.get_place(self);
-						if(tr = target_room) {
+						Room tr <- current_activity.get_destination(self).key;
+						if(tr = dst_room) {
 							target <- any_location_in(tr);
 						} else if (tr != nil ) {
-							target_room <- tr;
-							target <- (target_room.entrances closest_to self).location;
+							dst_room <- tr;
+							target <- (dst_room.entrances closest_to self).location;
 						}
 					}
 					goto_entrance <- false;
@@ -367,19 +362,24 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 				target <- nil;
 				if (species(current_activity) = BuildingSanitation) {
 					using_sanitation <- true;
-					target_room.people_inside << self;
+					dst_room.people_inside << self;
 				}
-				if (species(target_room) = BuildingEntrance) {
+				if (species(dst_room) = BuildingEntrance) {
 					is_outside <- true;
 					do release_path;
 				}
-				
-			}	
+			}
 		}
  	}
  	
  	rgb get_color {
-		return (state = latent) ? #pink : ((state = symptomatic)or(state=asymptomatic)or(state=presymptomatic)? #red : #green);
+ 		if state = latent {
+ 			return #pink;
+ 		} else if state in [symptomatic, asymptomatic, presymptomatic] {
+ 			return #red;
+ 		} else {
+ 			return #green;
+ 		}
  	}
  	
  	aspect default {
