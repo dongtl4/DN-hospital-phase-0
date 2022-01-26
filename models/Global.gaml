@@ -46,8 +46,8 @@ global {
 	
 	init {
 		// These will be overridden if they are put in ./Parameters.gaml
-		starting_date <- date([2020,4,6,5,30]);
-		final_date <- date([2020,4,20,18,0]);
+		starting_date <- date([2020,4,6,5,29,0]);
+		final_date <- date([2020,4,20,18,0,0]);
 		step <- 1#s;
 		nb_step_for_one_day <- #day / step;
 		seed <- 25.0;
@@ -191,7 +191,7 @@ global {
 		}
 	
 		int nbDesk<-length(Room accumulate each.available_places);
-		do create_people(nbDesk);
+		do create_recurring_people;
 		
 		
 		ask initial_nb_infected among BuildingIndividual{

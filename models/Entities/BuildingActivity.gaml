@@ -37,11 +37,11 @@ global {
 	}
 }
 
-species BuildingActivity virtual: true{
+// A "singleton" species that provides the destination for different activities
+species BuildingActivity virtual: true {
 	list<Room> activity_places;
 	
 	pair<Room, point> get_destination(BuildingIndividual p) virtual: true;
-
 }
 
 species ActivityGoToOffice parent: BuildingActivity {
@@ -60,7 +60,7 @@ species ActivityVisitInpatient parent: BuildingActivity {
 			!empty(each.people_inside where (species(each) = Inpatient))
 		);
 		if empty(wards) {
-			error name + " is trying to visit an inpatient but there are none in any ward!";
+			error p.name + " is trying to visit an inpatient but there are none in any ward!";
 		}
 		Room r <- one_of(wards);
 

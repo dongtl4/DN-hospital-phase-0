@@ -42,7 +42,6 @@ experiment AbstractExperiment type:gui autorun:false virtual: true{
 			species Doctor;
 			species Nurse;
 			species Inpatient;
-			species Outpatient;
 			species Visitor;
 
 		 	graphics "date" {

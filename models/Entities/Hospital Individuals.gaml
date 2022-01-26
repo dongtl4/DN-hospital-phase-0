@@ -12,8 +12,6 @@ import "./BuildingIndividual.gaml"
 
 species Doctor parent: BuildingIndividual {
 	init {
-		map<date,BuildingActivity> agenda_day;
-		
 		location <- any_location_in(one_of(BuildingEntrance).init_place);
 		working_place <- one_of(Room where (each.type = DOCTOR_ROOM or each.type = HEAD_DOCTOR_ROOM));
 		
@@ -26,30 +24,67 @@ species Doctor parent: BuildingIndividual {
 		if (working_place = nil) {
 			do die;
 		}
-		date cd <- current_date + rnd(arrival_time_interval);
-		if cd.hour >= 6 {
-			agenda_day[cd] <- first(ActivityGoToMeeting);
-		} else {
-			agenda_day[cd] <- first(ActivityGoToOffice);
-			date meeting_time <- date([cd.year,cd.month,cd.day,6,0,0]);
-			agenda_day[meeting_time] <- first(ActivityGoToMeeting);
-		}
+	}
+	
+	map<date, BuildingActivity> get_daily_agenda {
+		map<date, BuildingActivity> agenda;
 		
-		date work_time <- date([cd.year,cd.month,cd.day,7,0,0]);
-		if (flip(0.5)) {
-			agenda_day[work_time] <- first(ActivityVisitInpatient); 
+		date arriving_time <- date("05:30", TIME_FORMAT_STR) + rnd(arrival_time_interval);
+		// Daily meeting
+		date meeting_time <- date("06:00", TIME_FORMAT_STR);
+		if arriving_time >= meeting_time {
+			agenda[arriving_time] <- first(ActivityGoToMeeting);
 		} else {
-			agenda_day[work_time] <- first(ActivityGoToAdmissionRoom);
+			// If arrived a bit early, go to office to wait
+			agenda[arriving_time] <- first(ActivityGoToOffice);
+			agenda[meeting_time] <- first(ActivityGoToMeeting);
 		}
-		
-		date lunch_time <- date([cd.year,cd.month,cd.day,12,0,0]) + rnd(30#mn);
-
-		loop i from: 0 to: 5 {
-			loop d over: agenda_day.keys {
-				agenda_week[d add_days i] <- agenda_day[d];
+		// Morning shift
+		date work_time <- date("07:00", TIME_FORMAT_STR);
+		// Alternate between working at office, admitting new patients and visit inpatients
+		loop while: work_time.hour < 12 {
+			int choice <- rnd_choice([0.5, 0.3, 0.2]);
+			if choice = 0 {
+				agenda[work_time] <- first(ActivityGoToOffice);
+				work_time <- work_time + rnd(20#mn, 30#mn); 
+			} else if choice = 1 {
+				agenda[work_time] <- first(ActivityGoToAdmissionRoom);
+				work_time <- work_time + rnd(5#mn, 15#mn);
+			} else if choice = 2 {
+				agenda[work_time] <- first(ActivityVisitInpatient);
+				work_time <- work_time + rnd(5#mn, 10#mn);
 			}
 		}
-		current_agenda_week <- copy(agenda_week);
+		
+		// Lunch time
+		agenda[work_time] <- first(ActivityLeaveBuilding);
+		
+		// Afternoon shift
+		work_time <- date("13:00", TIME_FORMAT_STR);
+		// Alternate between working at office, admitting new patients and visit inpatients
+		loop while: work_time.hour < 18 {
+			int choice <- rnd_choice([0.5, 0.3, 0.2]);
+			if choice = 0 {
+				agenda[work_time] <- first(ActivityGoToOffice);
+				work_time <- work_time + rnd(20#mn, 30#mn); 
+			} else if choice = 1 {
+				agenda[work_time] <- first(ActivityGoToAdmissionRoom);
+				work_time <- work_time + rnd(5#mn, 15#mn);
+			} else if choice = 2 {
+				agenda[work_time] <- first(ActivityVisitInpatient);
+				work_time <- work_time + rnd(5#mn, 10#mn);
+			}
+		}
+		
+		// Leave for dinner / go home
+		agenda[work_time] <- first(ActivityLeaveBuilding);
+		
+		// Might do a night shift
+		if flip(0.2) {
+			work_time <- date("19:00", TIME_FORMAT_STR);
+			agenda[work_time] <- first(ActivityGoToOffice);
+		}
+		return agenda;
 	}
 
 	aspect default {
@@ -63,8 +98,6 @@ species Doctor parent: BuildingIndividual {
 
 species Nurse parent: BuildingIndividual {
 	init {
-		map<date,BuildingActivity> agenda_day;
-		
 		location <- any_location_in(one_of(BuildingEntrance).init_place);
 		working_place <- one_of(Room where (each.type = NURSE_ROOM));
 		
@@ -77,36 +110,53 @@ species Nurse parent: BuildingIndividual {
 		if (working_place = nil) {
 			do die;
 		}
-		date cd <- current_date + rnd(arrival_time_interval);
+	}
 
-		if cd.hour >= 6 {
-			agenda_day[cd] <- first(ActivityGoToMeeting);
+	map<date, BuildingActivity> get_daily_agenda {
+		map<date, BuildingActivity> agenda;
+		
+		date arriving_time <- date("05:30", TIME_FORMAT_STR) + rnd(arrival_time_interval);
+		// Daily meeting
+		date meeting_time <- date("06:00", TIME_FORMAT_STR);
+		if arriving_time >= meeting_time {
+			agenda[arriving_time] <- first(ActivityGoToMeeting);
 		} else {
-			agenda_day[cd] <- first(ActivityGoToOffice);
-			date meeting_time <- date([cd.year,cd.month,cd.day,6,0,0]);
-			agenda_day[meeting_time] <- first(ActivityGoToMeeting);
+			// If arrived a bit early, go to office to wait
+			agenda[arriving_time] <- first(ActivityGoToOffice);
+			agenda[meeting_time] <- first(ActivityGoToMeeting);
 		}
 		
-		date work_time <- date([cd.year,cd.month,cd.day,7,0,0]);
-		
+		date work_time <- date("07:00", TIME_FORMAT_STR);
 		loop while: work_time.hour < 12 {
 			if flip(0.7) {
-				agenda_day[work_time] <- first(ActivityVisitInpatient);
-				work_time <- work_time + rnd(5#mn); 
+				agenda[work_time] <- first(ActivityVisitInpatient);
+				work_time <- work_time + rnd(3#mn, 5#mn); 
 			} else {
-				agenda_day[work_time] <- first(ActivityGoToAdmissionRoom);
-				work_time <- work_time + rnd(30#mn); 
+				agenda[work_time] <- first(ActivityGoToAdmissionRoom);
+				work_time <- work_time + rnd(10#mn, 15#mn); 
 			}
 		}
 
 		date lunch_time <- work_time;
-
-		loop i from: 0 to: 5 {
-			loop d over: agenda_day.keys {
-				agenda_week[d add_days i] <- agenda_day[d];
+		agenda[work_time] <- first(ActivityLeaveBuilding);
+		
+		// Afternoon shift
+		work_time <- date("13:00", TIME_FORMAT_STR);
+		// Alternate between working at office, admitting new patients and visit inpatients
+		loop while: work_time.hour < 18 {
+			if flip(0.7) {
+				agenda[work_time] <- first(ActivityVisitInpatient);
+				work_time <- work_time + rnd(3#mn, 5#mn); 
+			} else {
+				agenda[work_time] <- first(ActivityGoToAdmissionRoom);
+				work_time <- work_time + rnd(10#mn, 15#mn); 
 			}
 		}
-		current_agenda_week <- copy(agenda_week);
+
+		// Go home
+		agenda[work_time] <- first(ActivityLeaveBuilding);
+
+		return agenda;
 	}
 
 	aspect default {
@@ -125,6 +175,10 @@ species Inpatient parent: BuildingIndividual {
 		location <- any_location_in(one_of(assigned_ward.available_places));
 		map<date,BuildingActivity> agenda_day;
 	}
+	
+	map<date, BuildingActivity> get_daily_agenda {
+		return map<date, BuildingActivity>([]);
+	}
 
 	aspect default {
 		if !is_outside {
@@ -136,60 +190,29 @@ species Inpatient parent: BuildingIndividual {
 species Visitor parent: BuildingIndividual {
 	init {
 		location <- any_location_in(one_of(BuildingEntrance).init_place);
-		
-		if (flip(1.0)) {
+
+		// Some visitor might be infectious
+		if (flip(0.2)) {
 			do define_new_case;
 			latent_period <- 0.0;
 		}
-
-		map<date, BuildingActivity> agenda_day;
-		
-		date work_time <- current_date + 10;
-		loop while: work_time.hour < 12 {
-			agenda_day[work_time] <- first(ActivityVisitInpatient);
-			work_time <- work_time + 10#mn; 
-		}
-		loop i from: 0 to: 5 {
-			loop d over: agenda_day.keys {
-				agenda_week[d add_days i] <- agenda_day[d];
-			}
-		}
-		current_agenda_week <- copy(agenda_week);
 	}
-	
-	aspect default {
-		if !is_outside {
-			draw triangle(2) color: get_color() border: #black;
-		}
-	}
-}
 
-species Outpatient parent: BuildingIndividual {
-	init {
-		map<date,BuildingActivity> agenda_day;
-		location <- any_location_in(one_of(BuildingEntrance).init_place);
+	map<date, BuildingActivity> get_daily_agenda {
+		map<date, BuildingActivity> agenda;
 
-		if (flip(1.0)) {
-			do define_new_case;
-			latent_period <- 0.0;
-		}
+		date arriving_time <- date("08:30", TIME_FORMAT_STR) + rnd(3#h);
+		agenda[arriving_time] <- first(ActivityVisitInpatient);
 
-		date visit_time <- current_date + 10#s;
-		date leave_time <- visit_time + rnd(15#mn);
-		agenda_day[visit_time] <- first(ActivityGoToAdmissionRoom);
-		agenda_day[leave_time] <- first(ActivityLeaveBuilding);
+		date leaving_time <- arriving_time + rnd(1#h, 8#h);
+		agenda[leaving_time] <- first(ActivityLeaveBuilding);
 		
-		loop i from: 0 to: 5 {
-			loop d over: agenda_day.keys {
-				agenda_week[d add_days i] <- agenda_day[d];
-			}
-		}
-		current_agenda_week <- copy(agenda_week);
+		return agenda;
 	}
 
 	aspect default {
 		if !is_outside {
-			draw triangle(1.2) color: get_color() border: #black;
+			draw triangle(1.5) color: get_color() border: #black;
 		}
 	}
 }

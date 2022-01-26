@@ -44,6 +44,8 @@ global {
 	string SFM <- "SFM";
 	string simple <- "simple";
 	
+	string TIME_FORMAT_STR <- "HH:mm";
+	
 	// Room types
 	string WARD <- "ward";
 	string DOCTOR_ROOM <- "doctor_room";

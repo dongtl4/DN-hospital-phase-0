@@ -27,7 +27,7 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 	PlaceInRoom working_desk;
 	map<date, BuildingActivity> agenda_week;
 	map<date, BuildingActivity> current_agenda_week;
-	BuildingActivity current_activity; 
+	BuildingActivity current_activity;
 	point target;
 	point dst_point;
 	Room dst_room;
@@ -74,10 +74,32 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 		use_geometry_waypoint <- P_use_geometry_target;
 		tolerance_waypoint <- P_tolerance_target;
 	}
+	
+	// To be defined	
+	map<date, BuildingActivity> get_daily_agenda {
+		return nil;
+	}
 
 	//#############################################################
 	//Reflexes
-	//#############################################################
+	//#############################################################		
+	reflex renew_agenda when: empty(current_agenda_week) {
+		map<date, BuildingActivity> new_daily_agenda <- get_daily_agenda();
+		if new_daily_agenda = nil {
+			return;
+		}
+
+		date cd <- current_date;
+		loop t over: new_daily_agenda.keys {
+			// Apply the correct date
+			date correct_time <- date([cd.year, cd.month, cd.day, t.hour, t.minute, t.second]);
+			if correct_time < current_date {
+				correct_time <- correct_time add_days 1;
+			}
+			current_agenda_week[correct_time] <- new_daily_agenda[t]; 
+		}
+	}
+	
 	//Reflex to trigger transmission to other individuals and environmental contamination
 	reflex infect_others when: not is_outside and is_infectious
 	{
@@ -158,12 +180,6 @@ species BuildingIndividual parent: AbstractIndividual schedules: shuffle(Buildin
 		}
 		do update_wear_mask();
 		if BENCHMARK {bench["Individual.update_epidemiology"] <- bench["Individual.update_epidemiology"] + machine_time - start;}
-	}
-	
-	reflex new_agenda when: empty(current_agenda_week) {
-		loop d over: agenda_week.keys {
-			current_agenda_week[d add_days 7] <- agenda_week[d];
-		}
 	}
 
 	reflex common_area_behavior when: not is_outside and species(dst_room) = CommonArea and (location overlaps dst_room) {
